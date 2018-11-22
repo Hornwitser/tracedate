@@ -4,14 +4,12 @@ import logging
 from time import time
 
 from discord import Object
-from discord.ext.commands import Bot, is_owner
+from discord.ext.commands import Bot, is_owner, command
 
 from tracedate import date_trace
 
 logging.basicConfig(level=logging.INFO)
 
-
-bot = Bot("}", fetch_offline_members=False)
 
 def ptime(timestamp):
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
@@ -25,7 +23,7 @@ def pdelta(a, b):
     else:
         return f"{delta.days} days"
 
-@bot.command()
+@command()
 async def trace(ctx, ch_msg_id):
     """Trace the version of discord.py used from a traceback
 
@@ -57,13 +55,23 @@ async def trace(ctx, ch_msg_id):
 **Branches:** {", ".join(branches) if branches else "*None match*"}
 **Tags:** {", ".join(tags) if tags else "*None match*"}""")
 
-@bot.command(hidden=True)
+@command(hidden=True)
 @is_owner()
 async def stop(ctx):
     """Stop running the bot"""
     await bot.logout()
 
+
+class Trace(Bot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_command(trace)
+        self.add_command(stop)
+
+
 if __name__ == '__main__':
     with open("config.json") as json_file:
         config = json.load(json_file)
+
+    bot = Trace("}", fetch_offline_members=False)
     bot.run(config['token'])
