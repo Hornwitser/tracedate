@@ -23,6 +23,18 @@ def pdelta(a, b):
     else:
         return f"{delta.days} days"
 
+def filter_code_block(content):
+    # Quoted tracebacks where the last line ends in tripple or single
+    # backticks get in the way for the line matching algorithm
+    def filter_line(line):
+        if line.endswith("```"):
+            return line[:-3]
+        if line.endswith("`"):
+            return line[:-1]
+        return line
+
+    return "\n".join(map(filter_line, content.split("\n")))
+
 @command()
 async def trace(ctx, ch_msg_id):
     """Trace the version of discord.py used from a traceback
@@ -34,7 +46,7 @@ async def trace(ctx, ch_msg_id):
     ch_id, msg_id = ch_msg_id.split('-')
     channel = bot.get_channel(int(ch_id))
     msg = await channel.get_message(int(msg_id))
-    result = date_trace(msg.content)
+    result = date_trace(filter_code_block(msg.content))
     if result is None:
         await ctx.send("No results")
         return
