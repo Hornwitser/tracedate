@@ -3,6 +3,7 @@ import re
 import shelve
 
 START_OF_REWRITE = '044b0824e68c4dacdaf26ff52a741ca1b5118c9b'
+FILE_PATTERN = r'File "([^"]*)", line ([0-9]+), in'
 
 def fix_path(path):
     path = path.replace('\\', '/')
@@ -16,10 +17,16 @@ def match_traceback(stored, trace):
     lines = trace.split('\n')
     pos = 0
     while pos < len(lines):
-        match = re.search(r'File "([^"]*)", line ([0-9]+), in', lines[pos])
-        if match and pos + 1 < len(lines):
+        match = re.search(FILE_PATTERN, lines[pos])
+        if (
+            match
+            and pos + 1 < len(lines)
+            # Sometimes a line is skipped
+            and not re.search(FILE_PATTERN, lines[pos+1])
+        ):
             path = fix_path(match[1])
             parts.append((path, int(match[2]), lines[pos+1].strip()))
+            pos += 1
         pos += 1
 
     matched = []
