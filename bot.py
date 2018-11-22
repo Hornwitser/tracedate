@@ -4,7 +4,7 @@ import logging
 from time import time
 
 from discord import Object
-from discord.ext.commands import Bot
+from discord.ext.commands import Bot, is_owner
 
 from tracedate import date_trace
 
@@ -63,6 +63,12 @@ async def trace(ctx, ch_msg_id):
 **Age:** At least {pdelta(end, time())}
 **Branches:** {", ".join(branches) if branches else "*None match*"}
 **Tags:** {", ".join(tags) if tags else "*None match*"}""")
+
+@bot.command(hidden=True)
+@is_owner()
+async def stop(ctx):
+    """Stop running the bot"""
+    await bot.logout()
 
 if __name__ == '__main__':
     with open("config.json") as json_file:
