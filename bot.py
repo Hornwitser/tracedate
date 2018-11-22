@@ -73,5 +73,5 @@ if __name__ == '__main__':
     with open("config.json") as json_file:
         config = json.load(json_file)
 
-    bot = Trace("}", fetch_offline_members=False)
+    bot = Trace(config['prefix'], fetch_offline_members=False)
     bot.run(config['token'])
