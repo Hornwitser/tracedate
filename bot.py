@@ -33,11 +33,7 @@ async def trace(ctx, ch_msg_id):
 
     ch_id, msg_id = ch_msg_id.split('-')
     channel = bot.get_channel(int(ch_id))
-    print("trace")
-    # Why does get_message exist?
-    #msg = await channel.get_message(int(msg_id))
-    msg = await channel.history(after=Object(id=int(msg_id) - 1), limit=1).get()
-    print("do_trace")
+    msg = await channel.get_message(int(msg_id))
     result = date_trace(msg.content)
     if result is None:
         await ctx.send("No results")
@@ -48,7 +44,6 @@ async def trace(ctx, ch_msg_id):
     tags = result['tags']
     branches = result['branches']
 
-    print("send result")
     await ctx.send(f"""\
 **Period:** {ptime(start)} to {ptime(end)} ({pdelta(start, end)} span)
 **Age:** At least {pdelta(end, time())}
