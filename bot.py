@@ -13,13 +13,6 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot("}", fetch_offline_members=False)
 
-@bot.event
-async def on_message(msg):
-    await bot.process_commands(msg)
-    if "Traceback (most recent call last):" in msg.content:
-        pass
-
-
 def ptime(timestamp):
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
 
