@@ -40,11 +40,11 @@ def merge(stored, data):
         print(path)
         for line_no, line_contents in lines.items():
             key = f'{path}:{line_no}'
-            stored_data = stored.get(key, defaultdict(set))
+            stored_data = defaultdict(set, stored.get(key, {}))
             for line_content, shas in line_contents.items():
                 stored_data[line_content] |= shas
 
-            stored[key] = stored_data
+            stored[key] = dict(stored_data)
 
 def filter_body(lines):
     if lines and lines[0] == "    \n":
@@ -56,7 +56,7 @@ def filter_body(lines):
     return "\n".join([l[4:-1] for l in lines])
 
 def get_meta(sha):
-    with os.popen(f'git log --no-walk --format=raw {sha}') as pipe:
+    with os.popen(f'git log --no-walk --format=raw {sha.hex()}') as pipe:
         lines = pipe.readlines()
 
     pos = 0
@@ -66,8 +66,7 @@ def get_meta(sha):
         if line:
             name, content = line.split(' ', 1)
             if name == 'commit':
-                if content != sha:
-                    raise RuntimeError(f"Looked up '{sha}' but got '{commit}'")
+                assert bytes.fromhex(content) == sha
             elif name == 'author':
                 author, timestamp, timezone = content.rsplit(' ', 2)
                 commit_meta['author'] = author
@@ -77,7 +76,7 @@ def get_meta(sha):
                 commit_meta['committer'] = committer
                 commit_meta['committer-time'] = int(timestamp)
             elif name == 'parent':
-                commit_meta['parents'].add(content)
+                commit_meta['parents'].add(bytes.fromhex(content))
             elif name == 'tree':
                 pass # ignore
             elif name == 'gpgsig':
@@ -105,21 +104,22 @@ def update_refs(meta):
         lines = pipe.readlines()
 
     for line in lines:
-        sha, ref = line[:-1].split(' ', 1)
+        hex_sha, ref = line[:-1].split(' ', 1)
         if ref.startswith('refs/heads/') or 'HEAD' in ref:
             continue
-        meta['refs'][ref] = sha
+        meta['refs'][ref] = bytes.fromhex(hex_sha)
 
 def repo(stored, ref):
     data = {}
     meta = stored.get('META', DEFAULT_META)
 
     with os.popen(f'git rev-list {ref}') as pipe:
-        for sha in map(str.strip, pipe.readlines()):
+        for hex_sha in map(str.strip, pipe.readlines()):
+            sha = bytes.fromhex(hex_sha)
             if sha in meta['commits']:
                 continue
-            run(['git', 'checkout', sha], capture_output=True, check=True)
-            print(sha)
+            run(['git', 'checkout', hex_sha], capture_output=True, check=True)
+            print(hex_sha)
             scan(data, sha)
             meta['commits'][sha] = get_meta(sha)
 
