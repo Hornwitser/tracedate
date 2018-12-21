@@ -2,7 +2,7 @@ from functools import partial
 import re
 import shelve
 
-START_OF_REWRITE = '044b0824e68c4dacdaf26ff52a741ca1b5118c9b'
+START_OF_REWRITE = bytes.fromhex('044b0824e68c4dacdaf26ff52a741ca1b5118c9b')
 FILE_PATTERN = r'File "([^"]*)", line ([0-9]+), in'
 
 def fix_path(path):
