@@ -3,6 +3,7 @@ import re
 import shelve
 
 START_OF_REWRITE = bytes.fromhex('044b0824e68c4dacdaf26ff52a741ca1b5118c9b')
+START_OF_ASYNC = bytes.fromhex('5a666c3f0dc2ecc60ca8320e50f391c6dee19e51')
 FILE_PATTERN = r'File "([^"]*)", line ([0-9]+), in'
 
 def fix_path(path):
@@ -53,25 +54,30 @@ def sha_to_committer_time(meta, sha):
 def ref_to_committer_time(meta, ref):
     return sha_to_committer_time(meta, meta['refs'][ref])
 
-def is_rewrite(meta, commits):
+def branches(meta, commits):
+    """Infer which branchs the passed commits happened on"""
+    found = []
     commits = sorted(commits, key=partial(sha_to_committer_time, meta))
+    walked = set()
     while commits:
         sha = commits.pop()
-        if sha == START_OF_REWRITE:
-            return True
-        commits.extend(meta['commits'][sha]['parents'])
-    return False
-
-def is_async(meta, commits):
-    commits = sorted(commits, key=partial(sha_to_committer_time, meta))
-    while commits:
-        sha = commits.pop()
-        if not meta['commits'][sha]['parents']:
-            return True
-        elif sha == START_OF_REWRITE:
+        if sha in walked:
             continue
-        commits.extend(meta['commits'][sha]['parents'])
-    return False
+
+        walked.add(sha)
+        if not meta['commits'][sha]['parents']:
+            found.append('legacy')
+
+        elif sha == START_OF_REWRITE:
+            found.append('rewrite')
+
+        elif sha == START_OF_ASYNC:
+            found.append('async')
+
+        else:
+            commits.extend(meta['commits'][sha]['parents'])
+
+    return found
 
 
 def date_trace(trace):
@@ -89,15 +95,9 @@ def date_trace(trace):
         lambda s: s.startswith("refs/tags"), sorted_refs
     )))
 
-    branches = []
-    if is_rewrite(meta, commits):
-        branches.append("rewrite")
-    if is_async(meta, commits):
-        branches.append("async")
-
     return {
         'tags': tags,
-        'branches': branches,
+        'branches': branches(meta, commits),
         'time-start': min(timestamps),
         'time-end': max(timestamps),
     }
