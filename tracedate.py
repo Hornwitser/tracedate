@@ -8,7 +8,7 @@ FILE_PATTERN = r'File "([^"]*)", line ([0-9]+), in'
 def fix_path(path):
     path = path.replace('\\', '/')
     if 'discord' in path:
-        path = path[path.index('discord'):]
+        path = path[path.rindex('discord'):]
 
     return path
 
