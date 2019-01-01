@@ -36,9 +36,13 @@ def match_traceback(stored, trace):
         if key not in stored:
             continue
 
+        part_matches = set()
         for stored_line, stored_commits in stored[key].items():
             if stored_line.endswith(line_content):
-                matched.append(stored_commits)
+                part_matches |= stored_commits
+
+        if part_matches:
+            matched.append(part_matches)
 
     if matched:
         common = matched.pop()
