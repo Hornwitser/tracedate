@@ -1,10 +1,13 @@
 from datetime import datetime
 import json
 import logging
+from sys import stderr
 from time import time
+from traceback import print_exception
 
-from discord import Forbidden, Object
-from discord.ext.commands import Bot, is_owner, command
+from discord import Forbidden, HTTPException, Object
+from discord.ext.commands import \
+    Bot, CheckFailure, CommandInvokeError, UserInputError, is_owner, command
 
 from tracedate import date_trace
 
@@ -74,11 +77,44 @@ async def stop(ctx):
     await bot.logout()
 
 
+class NoReplyPermission(CheckFailure):
+    pass
+
 class Trace(Bot):
+    async def can_reply(self, ctx):
+        if not ctx.channel.permissions_for(ctx.me).send_messages:
+            raise NoReplyPermission("Bot can't reply")
+        return True
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.check(self.can_reply)
         self.add_command(trace)
         self.add_command(stop)
+
+    async def on_command_error(self, ctx, error):
+        it = lambda cls: isinstance(error, cls)
+        if it(CommandInvokeError): reaction = "\N{COLLISION SYMBOL}"
+        elif it(NoReplyPermission): reaction = "\N{ZIPPER-MOUTH FACE}"
+        elif it(CheckFailure): reaction = "\N{NO ENTRY SIGN}"
+        elif it(UserInputError): reaction = "\N{BLACK QUESTION MARK ORNAMENT}"
+        else: reaction = None
+
+        if reaction is not None:
+            try:
+                await ctx.message.add_reaction(reaction)
+            except HTTPException:
+                if ctx.channel.permissions_for(ctx.me).send_messages:
+                    try:
+                        await ctx.send(reaction)
+                    except HTTPException:
+                        pass
+
+        if it(CommandInvokeError):
+            print("Exception in command {}:".format(ctx.command), file=stderr)
+            print_exception(
+                type(error), error, error.__traceback__, file=stderr
+            )
 
 
 if __name__ == '__main__':
