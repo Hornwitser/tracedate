@@ -3,7 +3,7 @@ import json
 import logging
 from time import time
 
-from discord import Object
+from discord import Forbidden, Object
 from discord.ext.commands import Bot, is_owner, command
 
 from tracedate import date_trace
@@ -45,7 +45,12 @@ async def trace(ctx, ch_msg_id):
 
     ch_id, msg_id = ch_msg_id.split('-')
     channel = bot.get_channel(int(ch_id))
-    msg = await channel.get_message(int(msg_id))
+    try:
+        msg = await channel.get_message(int(msg_id))
+    except Forbidden:
+        await ctx.channel.send("Bot does not have access to that channel")
+        return
+
     result = date_trace(filter_code_block(msg.content))
     if result is None:
         await ctx.send("No results")
